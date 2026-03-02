@@ -115,7 +115,7 @@ export function StepGenerate({ data, updateData, onNext, onBack }: Props) {
       if (newQ) {
         updateData({
           questions: data.questions.map((q) =>
-            q.id === questionId ? { ...newQ, id: crypto.randomUUID() } : q
+            q.id === questionId ? { ...newQ, id: Math.random().toString(36).slice(2) } : q
           ),
         });
         toast.success("Question regenerated");

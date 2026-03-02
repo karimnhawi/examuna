@@ -12,4 +12,4 @@ export function getGeminiClient() {
   return client;
 }
 
-export const GEMINI_MODEL = "gemini-3-flash";
+export const GEMINI_MODEL = "gemini-2.5-flash";

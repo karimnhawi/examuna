@@ -26,6 +26,31 @@ async function extractTextFromDocx(buffer: ArrayBuffer): Promise<string> {
   return result.value;
 }
 
+async function logExtraction(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  userId: string,
+  opts: {
+    questionsReturned: number;
+    success: boolean;
+    errorMessage?: string;
+    usage?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
+  }
+) {
+  await supabase.from("generation_logs").insert({
+    user_id: userId,
+    endpoint: "extract",
+    model: GEMINI_MODEL,
+    questions_returned: opts.questionsReturned,
+    success: opts.success,
+    error_message: opts.errorMessage ?? null,
+    prompt_tokens: opts.usage?.promptTokenCount ?? null,
+    output_tokens: opts.usage?.candidatesTokenCount ?? null,
+    total_tokens: opts.usage?.totalTokenCount ?? null,
+  }).then(() => {}, () => {}); // don't let logging failure mask real errors
+}
+
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   // Auth check
   const supabase = getSupabaseServerClient();
@@ -96,6 +121,13 @@ export async function POST(req: Request) {
             extracted = [];
           }
 
+          await logExtraction(supabase, user.id, {
+            questionsReturned: extracted.length,
+            success: extracted.length > 0,
+            errorMessage: extracted.length === 0 ? "No questions extracted from PDF" : undefined,
+            usage: response.usageMetadata,
+          });
+
           // Save and return early for PDF path
           if (extracted.length > 0 && sourceFileId) {
             await saveExtractedQuestions(supabase, extracted, user.id, sourceFileId);
@@ -131,6 +163,13 @@ export async function POST(req: Request) {
             extracted = [];
           }
 
+          await logExtraction(supabase, user.id, {
+            questionsReturned: extracted.length,
+            success: extracted.length > 0,
+            errorMessage: extracted.length === 0 ? "No questions extracted from image" : undefined,
+            usage: response.usageMetadata,
+          });
+
           if (extracted.length > 0 && sourceFileId) {
             await saveExtractedQuestions(supabase, extracted, user.id, sourceFileId);
           }
@@ -159,6 +198,13 @@ export async function POST(req: Request) {
       extracted = [];
     }
 
+    await logExtraction(supabase, user.id, {
+      questionsReturned: extracted.length,
+      success: extracted.length > 0,
+      errorMessage: extracted.length === 0 ? "No questions extracted from text" : undefined,
+      usage: response.usageMetadata,
+    });
+
     if (extracted.length > 0 && sourceFileId) {
       await saveExtractedQuestions(supabase, extracted, user.id, sourceFileId);
     }
@@ -166,6 +212,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ extracted });
   } catch (err) {
     console.error("Extract error:", err);
+
+    await logExtraction(supabase, user.id, {
+      questionsReturned: 0,
+      success: false,
+      errorMessage: err instanceof Error ? err.message : "Extraction failed",
+    });
+
     return NextResponse.json({
       extracted: [],
       error: "Extraction failed. The file may not contain recognizable exam questions.",

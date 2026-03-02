@@ -21,7 +21,7 @@ export function StepTopics({ data, updateData, onNext, onBack }: Props) {
     updateData({
       topics: [
         ...data.topics,
-        { id: crypto.randomUUID(), name: "", chapter: "", weight: 0 },
+        { id: Math.random().toString(36).slice(2), name: "", chapter: "", weight: 0 },
       ],
     });
   };

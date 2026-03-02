@@ -76,7 +76,7 @@ export function ExamBuilderClient({ locale }: { locale: string }) {
       const data = await res.json();
       const newQ = data.questions?.[0];
       if (newQ) {
-        setQuestions((qs) => qs.map((q) => (q.id === id ? { ...newQ, id: crypto.randomUUID() } : q)));
+        setQuestions((qs) => qs.map((q) => (q.id === id ? { ...newQ, id: Math.random().toString(36).slice(2) } : q)));
         toast.success("Question swapped");
       }
     } catch {

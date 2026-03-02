@@ -14,6 +14,8 @@ interface TopicInput {
   weight?: number;
 }
 
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   // Auth check
   const supabase = getSupabaseServerClient();
@@ -44,7 +46,7 @@ export async function POST(req: Request) {
 
   // If not using enhanced mode, fall back to legacy behavior
   if (!isEnhancedMode) {
-    return handleLegacyGenerate(supabase, subject, difficulty, safeCount);
+    return handleLegacyGenerate(supabase, subject, difficulty, safeCount, user.id);
   }
 
   // Enhanced generation with full criteria
@@ -249,6 +251,7 @@ Distribute questions across the topics${topics.some((t: TopicInput) => t.weight)
 ${ibCriteria.length > 0 ? "Distribute questions across the specified IB criteria." : ""}
 Include a MIX of difficulty levels: roughly 30% Easy, 50% Medium, 20% Hard.`;
 
+    console.log("[generate] Calling Gemini API with model:", GEMINI_MODEL);
     const response = await ai.models.generateContent({
       model: GEMINI_MODEL,
       contents: prompt,
@@ -258,10 +261,18 @@ Include a MIX of difficulty levels: roughly 30% Easy, 50% Medium, 20% Hard.`;
     });
 
     const responseText = response.text || "";
+    console.log("[generate] Gemini response length:", responseText.length);
+    console.log("[generate] Gemini response preview:", responseText.slice(0, 300));
+
+    // Extract token usage from response
+    const usage = response.usageMetadata;
 
     let questions;
     try {
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        console.error("[generate] No JSON array found in Gemini response. Full response:", responseText.slice(0, 1000));
+      }
       const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
       questions = parsed.map((q: Record<string, unknown>, i: number) => ({
         id: crypto.randomUUID(),
@@ -275,35 +286,87 @@ Include a MIX of difficulty levels: roughly 30% Easy, 50% Medium, 20% Hard.`;
         ib_level: q.ib_level || null,
         source: "ai" as const,
       }));
-    } catch {
-      questions = generateTemplateQuestions(safeCount, subject, topics);
+      console.log("[generate] Successfully parsed", questions.length, "AI questions");
+    } catch (parseErr) {
+      console.error("[generate] JSON parse error:", parseErr);
+      console.error("[generate] Raw response:", responseText.slice(0, 1000));
+
+      // Log failed generation
+      await supabase.from("generation_logs").insert({
+        user_id: user.id,
+        endpoint: "generate",
+        model: GEMINI_MODEL,
+        subject,
+        curriculum: curriculum || null,
+        grade: grade || null,
+        language,
+        questions_requested: safeCount,
+        questions_returned: 0,
+        success: false,
+        error_message: "JSON parse error: AI returned invalid response",
+        prompt_tokens: usage?.promptTokenCount ?? null,
+        output_tokens: usage?.candidatesTokenCount ?? null,
+        total_tokens: usage?.totalTokenCount ?? null,
+        google_search_used: true,
+      });
+
+      return NextResponse.json(
+        { error: "AI returned an invalid response. Please try again." },
+        { status: 502 }
+      );
     }
 
-    return NextResponse.json({ questions });
-  } catch {
-    const questions = generateTemplateQuestions(safeCount, subject, topics);
-    return NextResponse.json({ questions });
-  }
-}
+    // Log successful generation
+    await supabase.from("generation_logs").insert({
+      user_id: user.id,
+      endpoint: "generate",
+      model: GEMINI_MODEL,
+      subject,
+      curriculum: curriculum || null,
+      grade: grade || null,
+      language,
+      questions_requested: safeCount,
+      questions_returned: questions.length,
+      success: true,
+      prompt_tokens: usage?.promptTokenCount ?? null,
+      output_tokens: usage?.candidatesTokenCount ?? null,
+      total_tokens: usage?.totalTokenCount ?? null,
+      google_search_used: true,
+    });
 
-function generateTemplateQuestions(count: number, subject: string, topics: TopicInput[]) {
-  return Array.from({ length: count }).map((_, i) => ({
-    id: crypto.randomUUID(),
-    text: `[${subject}${topics[i % topics.length] ? ` - ${topics[i % topics.length].name}` : ""}] Design a structured response for learning objective ${i + 1}. Include explanation and evaluation.`,
-    marks: i % 2 === 0 ? 6 : 4,
-    topic: topics[i % topics.length]?.name || subject,
-    difficulty: "Medium",
-    cognitive_level: "Apply",
-    answer_key: "",
-    source: "template" as const,
-  }));
+    return NextResponse.json({ questions });
+  } catch (err) {
+    console.error("[generate] Gemini API call FAILED:", err);
+
+    // Log API failure
+    await supabase.from("generation_logs").insert({
+      user_id: user.id,
+      endpoint: "generate",
+      model: GEMINI_MODEL,
+      subject,
+      curriculum: curriculum || null,
+      grade: grade || null,
+      language,
+      questions_requested: safeCount,
+      questions_returned: 0,
+      success: false,
+      error_message: err instanceof Error ? err.message : "Gemini API call failed",
+      google_search_used: true,
+    }).then(() => {}, () => {}); // don't let logging failure mask the real error
+
+    return NextResponse.json(
+      { error: "Question generation is temporarily unavailable. Please try again in a moment." },
+      { status: 503 }
+    );
+  }
 }
 
 async function handleLegacyGenerate(
   supabase: ReturnType<typeof getSupabaseServerClient>,
   subject: string,
   difficulty: string,
-  safeCount: number
+  safeCount: number,
+  userId?: string,
 ) {
   // Try to fetch from question bank first
   let query = supabase
@@ -373,6 +436,7 @@ Return ONLY a valid JSON array (no markdown, no code blocks). Each object:
     });
 
     const responseText = response.text || "";
+    const usage = response.usageMetadata;
 
     let questions;
     try {
@@ -388,32 +452,72 @@ Return ONLY a valid JSON array (no markdown, no code blocks). Each object:
         answer_key: q.answer_key || "",
         source: "ai" as const,
       }));
-    } catch {
-      questions = Array.from({ length: safeCount }).map((_, i) => ({
-        id: crypto.randomUUID(),
-        text: `[${subject}] Design a structured response for learning objective ${i + 1}. Include explanation and evaluation.`,
-        marks: i % 2 === 0 ? 6 : 4,
-        topic: subject,
-        difficulty: difficulty,
-        cognitive_level: "Apply",
-        answer_key: "",
-        source: "template" as const,
-      }));
+    } catch (parseErr) {
+      console.error("[generate:legacy] JSON parse error:", parseErr);
+
+      if (userId) {
+        await supabase.from("generation_logs").insert({
+          user_id: userId,
+          endpoint: "generate",
+          model: GEMINI_MODEL,
+          subject,
+          language: "en",
+          questions_requested: safeCount,
+          questions_returned: 0,
+          success: false,
+          error_message: "JSON parse error: AI returned invalid response",
+          prompt_tokens: usage?.promptTokenCount ?? null,
+          output_tokens: usage?.candidatesTokenCount ?? null,
+          total_tokens: usage?.totalTokenCount ?? null,
+          google_search_used: true,
+        });
+      }
+
+      return NextResponse.json(
+        { error: "AI returned an invalid response. Please try again." },
+        { status: 502 }
+      );
+    }
+
+    if (userId) {
+      await supabase.from("generation_logs").insert({
+        user_id: userId,
+        endpoint: "generate",
+        model: GEMINI_MODEL,
+        subject,
+        language: "en",
+        questions_requested: safeCount,
+        questions_returned: questions.length,
+        success: true,
+        prompt_tokens: usage?.promptTokenCount ?? null,
+        output_tokens: usage?.candidatesTokenCount ?? null,
+        total_tokens: usage?.totalTokenCount ?? null,
+        google_search_used: true,
+      });
     }
 
     return NextResponse.json({ questions });
-  } catch {
-    const questions = Array.from({ length: safeCount }).map((_, i) => ({
-      id: crypto.randomUUID(),
-      text: `[${subject}] Design a structured response for learning objective ${i + 1}.`,
-      marks: i % 2 === 0 ? 6 : 4,
-      topic: subject,
-      difficulty: difficulty,
-      cognitive_level: "Apply",
-      answer_key: "",
-      source: "template" as const,
-    }));
+  } catch (err) {
+    console.error("[generate:legacy] Gemini API call FAILED:", err);
 
-    return NextResponse.json({ questions });
+    if (userId) {
+      await supabase.from("generation_logs").insert({
+        user_id: userId,
+        endpoint: "generate",
+        model: GEMINI_MODEL,
+        subject,
+        language: "en",
+        questions_requested: safeCount,
+        questions_returned: 0,
+        success: false,
+        error_message: err instanceof Error ? err.message : "Gemini API call failed",
+        google_search_used: true,
+      }).then(() => {}, () => {});
+    }
+
+    return NextResponse.json(
+      { error: "Question generation is temporarily unavailable. Please try again in a moment." },
+      { status: 503 }
+    );
   }
 }
