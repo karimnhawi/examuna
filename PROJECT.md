@@ -66,7 +66,7 @@ examuna/
 │   │   │   ├── page.tsx           # Landing page (public)
 │   │   │   ├── auth/              # Login/signup page
 │   │   │   │   └── callback/      # Auth callback handler
-│   │   │   └── dashboard/         # Single-page app (wizard + manual mode)
+│   │   │   └── dashboard/         # Single-page app with URL-based views (?view=wizard|exams|questions)
 │   │   └── api/
 │   │       ├── exams/             # CRUD for exams (GET, POST, DELETE)
 │   │       ├── export-docx/       # Word document export
@@ -75,7 +75,7 @@ examuna/
 │   │       └── upload/            # File upload to Supabase Storage
 │   ├── components/
 │   │   ├── layout/
-│   │   │   └── navbar.tsx         # Top nav (logo, dashboard link, user menu)
+│   │   │   └── navbar.tsx         # Top nav (i18n via nav.* keys, single sign-in CTA)
 │   │   ├── wizard/                # 5-step exam creation wizard
 │   │   │   ├── exam-wizard.tsx    # Wizard container + state management
 │   │   │   ├── step-setup.tsx     # Step 1: Curriculum, grade, subject, IB criteria
@@ -84,10 +84,8 @@ examuna/
 │   │   │   ├── step-generate.tsx  # Step 4: Generate + review questions
 │   │   │   └── step-export.tsx    # Step 5: Export to Word + save
 │   │   ├── dashboard/
-│   │   │   ├── exam-list.tsx      # Past exams list (export, delete)
-│   │   │   ├── question-bank.tsx  # Question bank browser (filter by topic/difficulty)
-│   │   │   ├── exam-builder-client.tsx  # (legacy, kept for reference)
-│   │   │   └── upload-dropzone.tsx      # (legacy, kept for reference)
+│   │   │   ├── exam-list.tsx      # Past exams list (export, inline delete confirm)
+│   │   │   └── question-bank.tsx  # Question bank browser (expandable, filter by topic/difficulty)
 │   │   └── ui/                    # shadcn/ui primitives (button, card, input, etc.)
 │   ├── lib/
 │   │   ├── gemini.ts              # Gemini client (GoogleGenAI SDK, gemini-3-flash)
@@ -116,15 +114,13 @@ examuna/
 4. **Generate** — AI creates questions based on all criteria; per-question regenerate/edit/remove; add more questions
 5. **Export** — Download as Word (.docx), save exam to database
 
-### Manual Mode (after first exam)
-Dashboard serves as home with:
-- **Create New Exam** — starts wizard
-- **My Exams** — list of past exams (view, export, delete)
-- **My Question Bank** — browse all extracted/generated questions with filters
-- **Upload Materials** — upload files independently
-
-### Curriculum Conversion
-In wizard Step 1, toggle "Convert existing exam" to upload a source exam (e.g., Lebanese geography test) and generate equivalent questions in a target format (e.g., IB MYP).
+### Dashboard (after first exam)
+Single-page dashboard with URL-based routing (`?view=wizard|exams|questions`) — browser Back/Forward works:
+- **Hero card** — fully clickable, navigates to wizard
+- **Stat cards** — clickable (Questions → question bank, Exams → exam list, Files → wizard)
+- **Quick links** — My Exams, Question Bank (2 cards)
+- **Recent exams** — clickable rows navigate to exam list
+- **Empty state** — welcome card shown when all stats are 0
 
 ## AI Features
 
@@ -183,7 +179,7 @@ In wizard Step 1, toggle "Convert existing exam" to upload a source exam (e.g., 
 - [x] Environment variables set on Vercel (including SUPABASE_SERVICE_ROLE_KEY)
 - [x] Auth simplified to email + password (removed Google OAuth + OTP)
 - [x] Single-page wizard flow (5 steps: setup → topics → materials → generate → export)
-- [x] Dashboard with manual mode (create exam, my exams, question bank, upload)
+- [x] Dashboard with URL-based routing, clickable cards, empty state for new users
 - [x] AI generation with full curriculum criteria, IB criteria, topic weights
 - [x] Google Search grounding for real curriculum standards lookup
 - [x] AI deduplication (no repeat questions across exams)
@@ -195,6 +191,13 @@ In wizard Step 1, toggle "Convert existing exam" to upload a source exam (e.g., 
 - [x] Supabase Storage bucket (`test-bank-files`) for file uploads
 - [x] public.users auto-sync trigger + backfill of existing auth users
 - [x] Upgraded to Gemini 3 Flash with new `@google/genai` SDK
+- [x] Full UX overhaul: clickable cards, URL routing, mobile fixes
+- [x] Navbar cleanup (single sign-in CTA, i18n via nav.* keys)
+- [x] ExamList: text labels on buttons, inline delete confirmation, exam-title filenames
+- [x] QuestionBank: expandable text, stable filters, question count header
+- [x] Wizard: always-visible mobile actions, confirm before regenerate-all, Add Question loading
+- [x] IB level range auto-clamping, removed dead convert mode checkbox
+- [x] Deleted orphaned /builder, /export, /upload routes
 
 ## What's Next
 - [ ] Test full end-to-end flow (upload Lebanese exam → extract → generate IB MYP equivalent → export)
@@ -203,10 +206,8 @@ In wizard Step 1, toggle "Convert existing exam" to upload a source exam (e.g., 
 - [ ] Question bank management (edit, archive, search)
 - [ ] Exam duplication (clone a past exam as starting point)
 - [ ] Answer key / rubric generation as separate export
-- [ ] User onboarding (first-time setup wizard for preferences)
 - [ ] Landing page polish (testimonials, screenshots, demo)
 - [ ] Error handling improvements (better user-facing messages)
-- [ ] Mobile responsiveness pass
 
 ## Dev Commands
 ```bash
@@ -217,11 +218,14 @@ git push origin main               # Push to GitHub (auto-deploys to Vercel)
 
 ## Git History
 ```
+6fabb15 Full UX overhaul: clickable cards, URL routing, mobile fixes, cleanup
+4606571 Retry Vercel deployment (2)
+0f4ac88 Add generation usage logging and set maxDuration on API routes
+2880bdd Upgrade AI prompt with real pedagogical guidance for teacher-quality questions
 f49b5d4 Fix foreign key error and extract actual content from uploaded files
 b3bd16f Redirect landing page CTA to dashboard when already logged in
 7ba6b68 Add single-page wizard, upgrade to Gemini 3 Flash with search grounding
 2a27143 Simplify auth to email + password (remove Google OAuth and OTP)
-01c3975 Fix Google OAuth error handling - catch errors before redirect
 c379169 Overhaul UI, auth, security, and wire up full exam pipeline
 460ee0b Initial commit - Examuna project setup
 ```
