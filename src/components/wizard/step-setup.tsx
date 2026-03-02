@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ interface Props {
 
 export function StepSetup({ data, updateData, onNext }: Props) {
   const t = useTranslations("wizard");
+  const [showErrors, setShowErrors] = useState(false);
   const grades = getGrades(data.curriculum);
   const showIB = isIB(data.curriculum);
 
@@ -59,6 +61,9 @@ export function StepSetup({ data, updateData, onNext }: Props) {
             onChange={(e) => updateData({ title: e.target.value })}
             placeholder={t("examTitlePlaceholder")}
           />
+          {showErrors && !data.title.trim() && (
+            <p className="text-xs text-destructive">{t("required")}</p>
+          )}
         </div>
 
         {/* Curriculum */}
@@ -76,6 +81,9 @@ export function StepSetup({ data, updateData, onNext }: Props) {
               </option>
             ))}
           </select>
+          {showErrors && !data.curriculum && (
+            <p className="text-xs text-destructive">{t("required")}</p>
+          )}
         </div>
 
         {/* Grade */}
@@ -93,6 +101,9 @@ export function StepSetup({ data, updateData, onNext }: Props) {
               </option>
             ))}
           </select>
+          {showErrors && !data.grade && (
+            <p className="text-xs text-destructive">{t("required")}</p>
+          )}
         </div>
 
         {/* Subject */}
@@ -103,6 +114,9 @@ export function StepSetup({ data, updateData, onNext }: Props) {
             onChange={(e) => updateData({ subject: e.target.value })}
             placeholder={t("subjectPlaceholder")}
           />
+          {showErrors && !data.subject.trim() && (
+            <p className="text-xs text-destructive">{t("required")}</p>
+          )}
         </div>
 
         {/* Language */}
@@ -151,8 +165,13 @@ export function StepSetup({ data, updateData, onNext }: Props) {
                     <select
                       value={ic.levelMin}
                       onChange={(e) => {
+                        const newMin = Number(e.target.value);
                         const updated = [...data.ibCriteria];
-                        updated[idx] = { ...updated[idx], levelMin: Number(e.target.value) };
+                        updated[idx] = {
+                          ...updated[idx],
+                          levelMin: newMin,
+                          levelMax: Math.max(newMin, updated[idx].levelMax),
+                        };
                         updateData({ ibCriteria: updated });
                       }}
                       className="h-8 rounded border border-border bg-white px-2 text-sm"
@@ -165,8 +184,13 @@ export function StepSetup({ data, updateData, onNext }: Props) {
                     <select
                       value={ic.levelMax}
                       onChange={(e) => {
+                        const newMax = Number(e.target.value);
                         const updated = [...data.ibCriteria];
-                        updated[idx] = { ...updated[idx], levelMax: Number(e.target.value) };
+                        updated[idx] = {
+                          ...updated[idx],
+                          levelMax: newMax,
+                          levelMin: Math.min(newMax, updated[idx].levelMin),
+                        };
                         updateData({ ibCriteria: updated });
                       }}
                       className="h-8 rounded border border-border bg-white px-2 text-sm"
@@ -183,25 +207,13 @@ export function StepSetup({ data, updateData, onNext }: Props) {
         </div>
       )}
 
-      {/* Convert toggle */}
-      <div className="flex items-start gap-3 rounded-lg border border-border p-4">
-        <input
-          type="checkbox"
-          checked={data.convertMode}
-          onChange={(e) => updateData({ convertMode: e.target.checked })}
-          className="mt-0.5 h-4 w-4 rounded border-border"
-        />
-        <div>
-          <p className="text-sm font-medium">{t("convertToggle")}</p>
-          <p className="text-xs text-muted-foreground">{t("convertDesc")}</p>
-        </div>
-      </div>
-
       {/* Navigation */}
       <div className="flex justify-end">
-        <Button onClick={onNext} disabled={!canProceed} className="gap-2">
-          {t("next")} <ArrowRight className="h-4 w-4" />
-        </Button>
+        <div onClick={() => { if (!canProceed) setShowErrors(true); }}>
+          <Button onClick={onNext} disabled={!canProceed} className="gap-2">
+            {t("next")} <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </Card>
   );

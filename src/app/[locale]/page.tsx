@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 import { Navbar } from "@/components/layout/navbar";
@@ -10,10 +11,11 @@ export default async function LandingPage({ params }: { params: { locale: string
   const t = await getTranslations("landing");
   const locale = params.locale;
 
-  // Check if user is already logged in
+  // Redirect logged-in users straight to dashboard
   const supabase = getSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const ctaHref = user ? `/${locale}/dashboard` : `/${locale}/auth`;
+  if (user) redirect(`/${locale}/dashboard`);
+  const ctaHref = `/${locale}/auth`;
 
   return (
     <div className="min-h-screen bg-background">

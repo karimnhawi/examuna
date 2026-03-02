@@ -32,10 +32,14 @@ export function StepGenerate({ data, updateData, onNext, onBack }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const totalMarks = data.questions.reduce((sum, q) => sum + q.marks, 0);
 
   const generate = async () => {
+    if (data.questions.length > 0 && !confirm("This will replace all existing questions. Continue?")) {
+      return;
+    }
     setGenerating(true);
     try {
       const payload = {
@@ -58,7 +62,6 @@ export function StepGenerate({ data, updateData, onNext, onBack }: Props) {
         })),
         referenceFileIds: data.referenceFileIds,
         questionCount: data.questionCount,
-        convertFrom: data.convertMode ? data.convertFileId : null,
       };
 
       const res = await fetch("/api/generate", {
@@ -147,6 +150,7 @@ export function StepGenerate({ data, updateData, onNext, onBack }: Props) {
   };
 
   const addQuestion = async () => {
+    setAdding(true);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -181,6 +185,8 @@ export function StepGenerate({ data, updateData, onNext, onBack }: Props) {
       }
     } catch {
       toast.error("Failed to add question");
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -295,7 +301,7 @@ export function StepGenerate({ data, updateData, onNext, onBack }: Props) {
             )}
 
             {editingId !== q.id && (
-              <div className="mt-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="mt-2 flex gap-1 opacity-100 sm:opacity-0 transition-opacity sm:group-hover:opacity-100">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -333,8 +339,8 @@ export function StepGenerate({ data, updateData, onNext, onBack }: Props) {
       </div>
 
       {data.questions.length > 0 && (
-        <Button variant="outline" onClick={addQuestion} className="gap-2">
-          <Plus className="h-4 w-4" /> {t("addQuestion")}
+        <Button variant="outline" onClick={addQuestion} disabled={adding} className="gap-2">
+          {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} {t("addQuestion")}
         </Button>
       )}
 

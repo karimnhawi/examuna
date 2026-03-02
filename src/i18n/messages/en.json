@@ -77,7 +77,14 @@
     "filterByTopic": "Filter by topic",
     "filterByDifficulty": "Filter by difficulty",
     "allTopics": "All topics",
-    "allDifficulties": "All difficulties"
+    "allDifficulties": "All difficulties",
+    "backToDashboard": "Back to Dashboard",
+    "welcome": "Welcome! Create your first exam to get started.",
+    "showing": "Showing {count} questions",
+    "confirmDelete": "Are you sure?",
+    "yesDelete": "Yes, delete",
+    "export": "Export",
+    "deleteLabel": "Delete"
   },
   "wizard": {
     "step1Title": "Exam Setup",
@@ -201,6 +208,11 @@
     "noExam": "No exam selected. Go to the builder to create one first.",
     "selectExam": "Select an exam to export",
     "exporting": "Generating document..."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "signIn": "Sign in",
+    "signOut": "Sign out"
   },
   "common": {
     "signIn": "Sign in",

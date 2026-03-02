@@ -43,6 +43,7 @@ export function StepExport({ data, updateData, locale, onBack, onDone }: Props) 
         body: JSON.stringify({
           title: data.title,
           subject: data.subject,
+          language: data.language,
           duration_minutes: null,
           total_marks: totalMarks,
           questions: data.questions.map((q, i) => ({
@@ -50,6 +51,8 @@ export function StepExport({ data, updateData, locale, onBack, onDone }: Props) 
             custom_question_text: q.text,
             position: i + 1,
             marks: q.marks,
+            ib_criterion: q.ib_criterion || null,
+            ib_level: q.ib_level ?? null,
           })),
         }),
       });
@@ -178,8 +181,12 @@ export function StepExport({ data, updateData, locale, onBack, onDone }: Props) 
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex flex-wrap gap-3">
+      {/* Actions + Back */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="ghost" onClick={onBack} className="gap-2">
+          <ArrowLeft className="h-4 w-4" /> {t("back")}
+        </Button>
+        <div className="flex-1" />
         <Button onClick={handleExport} disabled={exporting} className="gap-2">
           {exporting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -200,13 +207,6 @@ export function StepExport({ data, updateData, locale, onBack, onDone }: Props) 
             <Home className="h-4 w-4" />
           )}
           {saving ? t("saving") : t("saveDashboard")}
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex justify-start">
-        <Button variant="ghost" onClick={onBack} className="gap-2">
-          <ArrowLeft className="h-4 w-4" /> {t("back")}
         </Button>
       </div>
     </Card>

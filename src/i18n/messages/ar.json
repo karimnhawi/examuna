@@ -77,7 +77,14 @@
     "filterByTopic": "تصفية حسب الموضوع",
     "filterByDifficulty": "تصفية حسب الصعوبة",
     "allTopics": "جميع المواضيع",
-    "allDifficulties": "جميع المستويات"
+    "allDifficulties": "جميع المستويات",
+    "backToDashboard": "العودة للوحة التحكم",
+    "welcome": "مرحباً! أنشئ أول اختبار لك للبدء.",
+    "showing": "عرض {count} سؤال",
+    "confirmDelete": "هل أنت متأكد؟",
+    "yesDelete": "نعم، احذف",
+    "export": "تصدير",
+    "deleteLabel": "حذف"
   },
   "wizard": {
     "step1Title": "إعداد الاختبار",
@@ -201,6 +208,11 @@
     "noExam": "لم يتم اختيار اختبار. اذهب إلى المنشئ لإنشاء واحد أولاً.",
     "selectExam": "اختر اختباراً للتصدير",
     "exporting": "جارٍ إنشاء المستند..."
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "signIn": "تسجيل الدخول",
+    "signOut": "تسجيل الخروج"
   },
   "common": {
     "signIn": "تسجيل الدخول",

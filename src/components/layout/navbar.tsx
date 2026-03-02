@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { LogOut, Menu, X, FileText } from "lucide-react";
@@ -12,6 +13,7 @@ export function Navbar({ locale }: { locale: string }) {
   const [user, setUser] = useState<User | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
+  const t = useTranslations("nav");
   const supabase = getSupabaseBrowserClient();
 
   useEffect(() => {
@@ -40,23 +42,18 @@ export function Navbar({ locale }: { locale: string }) {
           {user ? (
             <>
               <Link href={`/${locale}/dashboard`}>
-                <Button variant="ghost" size="sm">Dashboard</Button>
+                <Button variant="ghost" size="sm">{t("dashboard")}</Button>
               </Link>
               <div className="mx-2 h-6 w-px bg-border" />
               <span className="text-sm text-muted-foreground">{user.email}</span>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="mr-1 h-4 w-4" /> Sign out
+                <LogOut className="mr-1 h-4 w-4" /> {t("signOut")}
               </Button>
             </>
           ) : (
-            <>
-              <Link href={`/${locale}/auth`}>
-                <Button variant="ghost">Sign in</Button>
-              </Link>
-              <Link href={`/${locale}/auth`}>
-                <Button>Get started</Button>
-              </Link>
-            </>
+            <Link href={`/${locale}/auth`}>
+              <Button>{t("signIn")}</Button>
+            </Link>
           )}
         </nav>
 
@@ -73,23 +70,18 @@ export function Navbar({ locale }: { locale: string }) {
             {user ? (
               <>
                 <Link href={`/${locale}/dashboard`} onClick={() => setMobileOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start">Dashboard</Button>
+                  <Button variant="ghost" className="w-full justify-start">{t("dashboard")}</Button>
                 </Link>
                 <div className="my-2 h-px bg-border" />
                 <p className="px-4 text-sm text-muted-foreground">{user.email}</p>
                 <Button variant="ghost" className="w-full justify-start" onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" /> Sign out
+                  <LogOut className="mr-2 h-4 w-4" /> {t("signOut")}
                 </Button>
               </>
             ) : (
-              <>
-                <Link href={`/${locale}/auth`} onClick={() => setMobileOpen(false)}>
-                  <Button variant="ghost" className="w-full">Sign in</Button>
-                </Link>
-                <Link href={`/${locale}/auth`} onClick={() => setMobileOpen(false)}>
-                  <Button className="w-full">Get started</Button>
-                </Link>
-              </>
+              <Link href={`/${locale}/auth`} onClick={() => setMobileOpen(false)}>
+                <Button className="w-full">{t("signIn")}</Button>
+              </Link>
             )}
           </nav>
         </div>

@@ -2,6 +2,29 @@ import { NextResponse } from "next/server";
 import { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType, BorderStyle } from "docx";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 
+const strings = {
+  en: {
+    studentName: "Student Name: ________________________________",
+    date: "Date: ________________",
+    duration: (m: number) => `Duration: ${m} minutes`,
+    totalMarks: (m: number) => `Total Marks: ${m}`,
+    instructions: "Instructions",
+    instructionsBody: "Answer all questions in the spaces provided. Show all working where applicable.",
+    marks: (m: number) => `[${m} marks]`,
+    ibLevel: (criterion: string, level: number) => `[Criterion ${criterion} — Level ${level}]`,
+  },
+  ar: {
+    studentName: "اسم الطالب: ________________________________",
+    date: "التاريخ: ________________",
+    duration: (m: number) => `المدة: ${m} دقيقة`,
+    totalMarks: (m: number) => `مجموع العلامات: ${m}`,
+    instructions: "التعليمات",
+    instructionsBody: "أجب عن جميع الأسئلة في المساحات المخصصة. أظهر جميع خطوات الحل عند الحاجة.",
+    marks: (m: number) => `[${m} علامات]`,
+    ibLevel: (criterion: string, level: number) => `[المعيار ${criterion} — المستوى ${level}]`,
+  },
+} as const;
+
 export async function GET(req: Request) {
   // Auth check
   const supabase = getSupabaseServerClient();
@@ -27,8 +50,8 @@ export async function GET(req: Request) {
   const { data: exam, error: examError } = await supabase
     .from("exams")
     .select(`
-      id, title, subject, duration_minutes, total_marks,
-      exam_questions (id, custom_question_text, position, marks, question_id)
+      id, title, subject, language, duration_minutes, total_marks,
+      exam_questions (id, custom_question_text, position, marks, question_id, ib_criterion, ib_level)
     `)
     .eq("id", examId)
     .single();
@@ -36,6 +59,10 @@ export async function GET(req: Request) {
   if (examError || !exam) {
     return NextResponse.json({ error: "Exam not found" }, { status: 404 });
   }
+
+  const lang = (exam.language === "ar" ? "ar" : "en") as keyof typeof strings;
+  const s = strings[lang];
+  const isRtl = lang === "ar";
 
   // Sort questions by position
   const questions = (exam.exam_questions || []).sort(
@@ -60,19 +87,19 @@ export async function GET(req: Request) {
 
     // Student info
     new Paragraph({
-      children: [new TextRun({ text: "Student Name: ________________________________", size: 22 })],
+      children: [new TextRun({ text: s.studentName, size: 22 })],
     }),
     new Paragraph({
-      children: [new TextRun({ text: "Date: ________________", size: 22 })],
+      children: [new TextRun({ text: s.date, size: 22 })],
     }),
     exam.duration_minutes
       ? new Paragraph({
-          children: [new TextRun({ text: `Duration: ${exam.duration_minutes} minutes`, size: 22 })],
+          children: [new TextRun({ text: s.duration(exam.duration_minutes), size: 22 })],
         })
       : new Paragraph({ text: "" }),
     exam.total_marks
       ? new Paragraph({
-          children: [new TextRun({ text: `Total Marks: ${exam.total_marks}`, size: 22 })],
+          children: [new TextRun({ text: s.totalMarks(exam.total_marks), size: 22 })],
         })
       : new Paragraph({ text: "" }),
     new Paragraph({ text: "" }),
@@ -84,19 +111,24 @@ export async function GET(req: Request) {
 
     // Instructions
     new Paragraph({
-      text: "Instructions",
+      text: s.instructions,
       heading: HeadingLevel.HEADING_2,
     }),
     new Paragraph({
       children: [
-        new TextRun({ text: "Answer all questions in the spaces provided. Show all working where applicable.", size: 22 }),
+        new TextRun({ text: s.instructionsBody, size: 22 }),
       ],
     }),
     new Paragraph({ text: "" }),
   ];
 
   // Questions
-  questions.forEach((q: { custom_question_text: string; position: number; marks: number }, index: number) => {
+  questions.forEach((q: { custom_question_text: string; position: number; marks: number; ib_criterion?: string; ib_level?: number }, index: number) => {
+    // Build the marks/level label
+    const label = q.ib_criterion && q.ib_level != null
+      ? s.ibLevel(q.ib_criterion, q.ib_level)
+      : s.marks(q.marks);
+
     children.push(
       new Paragraph({
         children: [
@@ -105,9 +137,9 @@ export async function GET(req: Request) {
         ],
       }),
       new Paragraph({
-        alignment: AlignmentType.RIGHT,
+        alignment: isRtl ? AlignmentType.LEFT : AlignmentType.RIGHT,
         children: [
-          new TextRun({ text: `[${q.marks} marks]`, italics: true, size: 20, color: "666666" }),
+          new TextRun({ text: label, italics: true, size: 20, color: "666666" }),
         ],
       }),
       new Paragraph({ text: "" }),

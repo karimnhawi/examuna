@@ -3,6 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { defaultLocale, locales } from "@/i18n/routing";
 
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
+
 const intlMiddleware = createIntlMiddleware({
   locales,
   defaultLocale,
@@ -22,29 +24,38 @@ export async function middleware(request: NextRequest) {
 
   if (!isProtected) return intlResponse;
 
-  // Create a Supabase client to check auth
+  // Create a response we can modify to set refreshed cookies
+  const response = intlResponse;
+
+  // Create a Supabase client that can refresh the session and update cookies
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get: (name: string) => request.cookies.get(name)?.value,
-        set: () => {},
-        remove: () => {},
+        set: (name: string, value: string, options: Record<string, unknown>) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          response.cookies.set(name, value, { ...options, maxAge: COOKIE_MAX_AGE } as any);
+        },
+        remove: (name: string, options: Record<string, unknown>) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          response.cookies.set(name, "", { ...options, maxAge: 0 } as any);
+        },
       },
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     const locale = locales.find((l) => pathname.startsWith(`/${l}`)) || defaultLocale;
     const loginUrl = new URL(`/${locale}/auth`, request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  return intlResponse;
+  return response;
 }
 
 export const config = {

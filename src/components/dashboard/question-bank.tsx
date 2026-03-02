@@ -18,11 +18,30 @@ interface BankQuestion {
 export function QuestionBank() {
   const t = useTranslations("dashboard");
   const [questions, setQuestions] = useState<BankQuestion[]>([]);
+  const [allTopics, setAllTopics] = useState<string[]>([]);
+  const [allDifficulties, setAllDifficulties] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [topicFilter, setTopicFilter] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Fetch unique topics and difficulties once on mount
   useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    supabase
+      .from("question_bank")
+      .select("topic, difficulty")
+      .then(({ data }) => {
+        if (data) {
+          setAllTopics([...new Set(data.map((q) => q.topic).filter(Boolean))] as string[]);
+          setAllDifficulties([...new Set(data.map((q) => q.difficulty).filter(Boolean))] as string[]);
+        }
+      });
+  }, []);
+
+  // Fetch filtered questions
+  useEffect(() => {
+    setLoading(true);
     const supabase = getSupabaseBrowserClient();
     let query = supabase
       .from("question_bank")
@@ -39,10 +58,6 @@ export function QuestionBank() {
     });
   }, [topicFilter, difficultyFilter]);
 
-  // Get unique topics/difficulties for filters
-  const topics = [...new Set(questions.map((q) => q.topic).filter(Boolean))] as string[];
-  const difficulties = [...new Set(questions.map((q) => q.difficulty).filter(Boolean))] as string[];
-
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -53,15 +68,18 @@ export function QuestionBank() {
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      {/* Count header + Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm text-muted-foreground">
+          {t("showing", { count: questions.length })}
+        </span>
         <select
           value={topicFilter}
           onChange={(e) => setTopicFilter(e.target.value)}
           className="h-9 rounded-md border border-border bg-white px-3 text-sm"
         >
           <option value="">{t("allTopics")}</option>
-          {topics.map((tp) => (
+          {allTopics.map((tp) => (
             <option key={tp} value={tp}>
               {tp}
             </option>
@@ -73,7 +91,7 @@ export function QuestionBank() {
           className="h-9 rounded-md border border-border bg-white px-3 text-sm"
         >
           <option value="">{t("allDifficulties")}</option>
-          {difficulties.map((d) => (
+          {allDifficulties.map((d) => (
             <option key={d} value={d}>
               {d}
             </option>
@@ -88,9 +106,13 @@ export function QuestionBank() {
       ) : (
         <div className="space-y-2">
           {questions.map((q) => (
-            <Card key={q.id} className="p-4">
+            <Card
+              key={q.id}
+              className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => setExpandedId(expandedId === q.id ? null : q.id)}
+            >
               <div className="flex items-start justify-between gap-3">
-                <p className="text-sm leading-relaxed line-clamp-2">
+                <p className={`text-sm leading-relaxed ${expandedId === q.id ? "" : "line-clamp-2"}`}>
                   {q.question_text}
                 </p>
                 <div className="flex flex-shrink-0 gap-1">

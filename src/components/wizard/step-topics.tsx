@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ interface Props {
 
 export function StepTopics({ data, updateData, onNext, onBack }: Props) {
   const t = useTranslations("wizard");
+  const [showErrors, setShowErrors] = useState(false);
 
   const addTopic = () => {
     updateData({
@@ -66,6 +68,9 @@ export function StepTopics({ data, updateData, onNext, onBack }: Props) {
                 onChange={(e) => updateTopic(topic.id, { name: e.target.value })}
                 placeholder={t("topicNamePlaceholder")}
               />
+              {showErrors && !topic.name.trim() && (
+                <p className="text-xs text-destructive">{t("required")}</p>
+              )}
             </div>
             <div className="min-w-0 flex-1 space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
@@ -113,9 +118,11 @@ export function StepTopics({ data, updateData, onNext, onBack }: Props) {
         <Button variant="ghost" onClick={onBack} className="gap-2">
           <ArrowLeft className="h-4 w-4" /> {t("back")}
         </Button>
-        <Button onClick={onNext} disabled={!canProceed} className="gap-2">
-          {t("next")} <ArrowRight className="h-4 w-4" />
-        </Button>
+        <div onClick={() => { if (!canProceed) setShowErrors(true); }}>
+          <Button onClick={onNext} disabled={!canProceed} className="gap-2">
+            {t("next")} <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </Card>
   );

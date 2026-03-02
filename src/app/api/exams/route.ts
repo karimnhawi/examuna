@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { title, subject, duration_minutes, total_marks, questions } = body;
+  const { title, subject, language, duration_minutes, total_marks, questions } = body;
 
   if (!title || !questions || !Array.isArray(questions) || questions.length === 0) {
     return NextResponse.json({ error: "Title and at least one question are required" }, { status: 400 });
@@ -23,6 +23,7 @@ export async function POST(req: Request) {
       user_id: user.id,
       title,
       subject: subject || null,
+      language: language || null,
       duration_minutes: duration_minutes || null,
       total_marks: total_marks || null,
       status: "draft",
@@ -41,6 +42,8 @@ export async function POST(req: Request) {
     custom_question_text: q.custom_question_text || null,
     position: q.position || 0,
     marks: q.marks || 0,
+    ib_criterion: q.ib_criterion || null,
+    ib_level: q.ib_level ?? null,
     action_state: "keep",
   }));
 

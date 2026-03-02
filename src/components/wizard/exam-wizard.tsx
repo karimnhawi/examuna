@@ -51,8 +51,6 @@ export interface WizardData {
   subject: string;
   language: "en" | "ar";
   ibCriteria: IBCriterion[];
-  convertMode: boolean;
-  convertFileId: string | null;
   // Step 2
   topics: Topic[];
   // Step 3
@@ -77,8 +75,6 @@ const INITIAL_DATA: WizardData = {
     { criterion: "C", levelMin: 1, levelMax: 8, enabled: false },
     { criterion: "D", levelMin: 1, levelMax: 8, enabled: false },
   ],
-  convertMode: false,
-  convertFileId: null,
   topics: [],
   referenceFileIds: [],
   uploadedFiles: [],
