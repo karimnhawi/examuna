@@ -39,6 +39,7 @@
     "googleButton": "Continue with Google",
     "otpSent": "Check your inbox for a secure login link!",
     "otpError": "Could not send login link. Please try again.",
+    "googleNotEnabled": "Google sign-in is not available yet. Please use email instead.",
     "divider": "or",
     "terms": "By signing in, you agree to our terms of service and privacy policy."
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
@@ -16,9 +16,21 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
   const locale = params.locale;
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || `/${locale}/dashboard`;
+  const errorParam = searchParams.get("error");
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState<"email" | "google" | null>(null);
+
+  // Show error from callback/redirect failures
+  useEffect(() => {
+    if (errorParam) {
+      const messages: Record<string, string> = {
+        auth_failed: "Authentication failed. Please try again.",
+        provider_not_enabled: "Google sign-in is not available yet. Please use email instead.",
+      };
+      toast.error(messages[errorParam] || "Something went wrong. Please try again.");
+    }
+  }, [errorParam]);
 
   const handleEmailAuth = async () => {
     if (!email || !email.includes("@")) {
@@ -45,13 +57,26 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
     setLoading("google");
     try {
       const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}/${locale}/auth/callback?next=${redirect}` },
+        options: {
+          redirectTo: `${window.location.origin}/${locale}/auth/callback?next=${redirect}`,
+          skipBrowserRedirect: true,
+        },
       });
       if (error) throw error;
-    } catch {
-      toast.error(t("otpError"));
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No redirect URL returned");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("provider") || message.includes("not enabled") || message.includes("Unsupported")) {
+        toast.error(t("googleNotEnabled"));
+      } else {
+        toast.error(t("otpError"));
+      }
       setLoading(null);
     }
   };
