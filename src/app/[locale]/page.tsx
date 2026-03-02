@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { getSupabaseServerClient } from "@/lib/supabase-server";
 import { Navbar } from "@/components/layout/navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,11 @@ import { Upload, Brain, FileDown, Sparkles, CheckCircle, Zap, Shield } from "luc
 export default async function LandingPage({ params }: { params: { locale: string } }) {
   const t = await getTranslations("landing");
   const locale = params.locale;
+
+  // Check if user is already logged in
+  const supabase = getSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const ctaHref = user ? `/${locale}/dashboard` : `/${locale}/auth`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -32,7 +38,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               {t("sub")}
             </p>
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link href={`/${locale}/auth`}>
+              <Link href={ctaHref}>
                 <Button size="lg" className="gap-2 px-8 text-base">
                   <Zap className="h-4 w-4" />
                   {t("cta")}
@@ -133,7 +139,7 @@ export default async function LandingPage({ params }: { params: { locale: string
           <Card className="mx-auto max-w-2xl bg-gradient-to-br from-primary/5 to-blue-500/5 text-center">
             <h2 className="mb-4 text-2xl font-bold">{t("ctaTitle")}</h2>
             <p className="mb-8 text-muted-foreground">{t("ctaSub")}</p>
-            <Link href={`/${locale}/auth`}>
+            <Link href={ctaHref}>
               <Button size="lg" className="px-8">{t("cta")}</Button>
             </Link>
           </Card>
