@@ -167,16 +167,66 @@ IMPORTANT: Match the teacher's question style — similar sentence structure, ph
           .join("\n")}`
       : "";
 
-    const prompt = `You are an expert exam question writer for ${curriculum || "general"} curriculum.
+    // Build curriculum-specific pedagogy instructions
+    const currLower = (curriculum || "").toLowerCase();
+    const isIB = currLower.includes("ib") || currLower.includes("myp") || currLower.includes("dp");
+    const isLebanese = currLower.includes("leban");
 
-Generate ${safeCount} exam questions with these specifications:
-- Exam title: ${title || subject}
+    let pedagogyBlock = "";
+    if (isIB) {
+      pedagogyBlock = `
+IB EXAM WRITING RULES — follow these strictly:
+- Use official IB command terms precisely: "State" (1-2 marks), "Describe" (2-3 marks), "Explain" (3-4 marks), "Analyse" (4-5 marks), "Evaluate" / "Discuss" / "To what extent" (5-8 marks)
+- Each question MUST start with a command term — never start with "What" or "How" for higher-order questions
+- Structure multi-part questions as (a), (b), (c) that scaffold from low to high cognitive demand
+- Include stimulus material where appropriate: a short quote, data table, map, scenario, or case study description that students must interpret
+- For Criterion A (Knowledge): test factual recall and conceptual understanding
+- For Criterion B (Investigation): ask students to formulate research questions, collect/process data
+- For Criterion C (Communication): require structured responses with subject-specific terminology
+- For Criterion D (Critical Thinking): demand evaluation of perspectives, evidence-based arguments, justified conclusions
+- Mark allocations must match cognitive demand: recall = 1-2 marks, application = 3-4 marks, analysis/evaluation = 5-8 marks
+- Use real-world contexts and scenarios relevant to ${grade || "the grade level"} students`;
+    } else if (isLebanese) {
+      pedagogyBlock = `
+LEBANESE CURRICULUM EXAM WRITING RULES:
+- Follow the official Lebanese Brevet/Baccalaureate exam format
+- Include both knowledge-based questions (definitions, short answers) and application questions
+- Use clear, direct language appropriate for the grade level
+- Structure: start with easier recall questions, progress to analysis and synthesis
+- Include questions that reference specific textbook content and chapters where specified
+- For Arabic-medium subjects, use formal Arabic (فصحى) with proper academic terminology
+- Balance between objective questions (fill-in-the-blank, match) and subjective questions (explain, compare, discuss)`;
+    } else {
+      pedagogyBlock = `
+EXAM WRITING BEST PRACTICES:
+- Use precise command terms: "Define" (1 mark), "Describe" (2-3 marks), "Explain" (3-4 marks), "Compare and contrast" (4-5 marks), "Evaluate" / "Justify" (5-8 marks)
+- Start each question with a clear command term — avoid vague phrasing like "Talk about" or "Tell us about"
+- Include stimulus material where appropriate: a short scenario, quote, diagram description, or data that students must interpret before answering
+- Structure multi-part questions that scaffold: part (a) tests recall, part (b) tests understanding, part (c) tests higher-order thinking
+- Use real-world, age-appropriate contexts that make questions engaging and meaningful`;
+    }
+
+    const prompt = `You are a veteran ${subject} teacher with 20 years of experience writing exams for the ${curriculum || "general"} curriculum. You write questions that genuinely test student understanding, not questions that can be answered by copying a textbook sentence.
+
+TASK: Generate ${safeCount} high-quality exam questions.
+
+EXAM DETAILS:
+- Title: ${title || subject}
 - Curriculum: ${curriculum || "General"}
 - Grade level: ${grade || "not specified"}
 - Subject: ${subject}
-- Language: ${language === "ar" ? "Arabic" : "English"}
+- Language: ${language === "ar" ? "Arabic — write ALL question text in formal Arabic (فصحى)" : "English"}
 ${topicsSection}
 ${ibSection}
+${pedagogyBlock}
+
+QUESTION QUALITY REQUIREMENTS:
+1. Every question must test a SPECIFIC learning objective — not vague general knowledge
+2. Higher-mark questions (4+) MUST include context: a scenario, case study, data, quote, or real-world situation the student must analyze
+3. Vary question types: some short-answer, some structured multi-part, some extended response
+4. Answer keys must be detailed enough for a substitute teacher to mark accurately — include key points, acceptable alternatives, and mark breakdown
+5. Questions should be something a student CANNOT answer by just Googling — they must demonstrate understanding
+6. Use age-appropriate vocabulary and scenarios for ${grade || "the specified grade level"}
 ${referenceContext}
 ${styleContext}
 ${usedQuestionsContext}
@@ -184,21 +234,20 @@ ${conversionContext}
 
 ${convertFrom ? "IMPORTANT: You are converting an existing exam to a new format. Adapt the source questions to match the target curriculum and criteria while preserving the content/topics." : ""}
 
-Use Google Search to look up the latest curriculum standards, official criteria descriptors, and subject-specific content for ${curriculum || "the"} curriculum${grade ? ` at ${grade} level` : ""}. This ensures questions align with current official standards.
+Use Google Search to look up the latest ${curriculum || ""} curriculum guide, subject guide, and official assessment criteria for ${subject}${grade ? ` at ${grade} level` : ""}. Base your questions on real curriculum content and learning objectives — not generic textbook knowledge.
 
-For each question, return a JSON object with:
-- "text": The full question text${language === "ar" ? " (in Arabic)" : ""}
-- "marks": Point value (integer, 2-8)
+OUTPUT FORMAT — return ONLY a valid JSON array, no markdown or code blocks. Each object must have:
+- "text": The full question text (including any stimulus material, context, and all sub-parts)${language === "ar" ? " — written entirely in Arabic" : ""}
+- "marks": Point value (integer, 2-8) — must match the cognitive demand
 - "topic": The specific topic from the topics list
 - "difficulty": "Easy", "Medium", or "Hard"
 - "cognitive_level": One of "Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"
-- "answer_key": Brief model answer
+- "answer_key": Detailed model answer with mark breakdown (e.g., "1 mark for identifying X, 2 marks for explaining Y with an example, 1 mark for linking to Z")
 ${ibCriteria.length > 0 ? '- "ib_criterion": The IB criterion letter (A, B, C, or D) this question assesses\n- "ib_level": The target achievement level (integer)' : ""}
 
 Distribute questions across the topics${topics.some((t: TopicInput) => t.weight) ? " according to their weights" : " roughly equally"}.
 ${ibCriteria.length > 0 ? "Distribute questions across the specified IB criteria." : ""}
-
-Return ONLY a valid JSON array, no markdown or code blocks.`;
+Include a MIX of difficulty levels: roughly 30% Easy, 50% Medium, 20% Hard.`;
 
     const response = await ai.models.generateContent({
       model: GEMINI_MODEL,
@@ -295,17 +344,25 @@ async function handleLegacyGenerate(
   try {
     const ai = getGeminiClient();
 
-    const prompt = `Generate ${safeCount} exam questions for the subject "${subject}" at ${difficulty} difficulty level.
+    const prompt = `You are a veteran ${subject} teacher writing an exam. Generate ${safeCount} high-quality exam questions at ${difficulty} difficulty.
 
-Return a JSON array where each item has:
-- "text": The full question text
-- "marks": Point value (integer, 2-8)
+QUESTION QUALITY REQUIREMENTS:
+- Each question must test a SPECIFIC concept — not vague general knowledge
+- Use precise command terms: "Define" (1m), "Describe" (2-3m), "Explain" (3-4m), "Evaluate" (5-8m)
+- Higher-mark questions (4+) MUST include a real-world scenario, case study, or data that students must analyze
+- Vary question types: short-answer, structured multi-part, and extended response
+- Answer keys must include key points and mark breakdown so any teacher can mark them
+- Questions should require genuine understanding — not just memorization
+
+Use Google Search to look up the latest curriculum standards and subject content for ${subject} to ensure questions are accurate and aligned with real learning objectives.
+
+Return ONLY a valid JSON array (no markdown, no code blocks). Each object:
+- "text": Full question text including any stimulus/context and sub-parts
+- "marks": Point value (integer, 2-8) matching cognitive demand
 - "topic": The specific topic
 - "difficulty": "${difficulty === "Mixed" ? "Easy/Medium/Hard mix" : difficulty}"
 - "cognitive_level": One of "Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"
-- "answer_key": Brief model answer
-
-Return ONLY a valid JSON array, no markdown or code blocks.`;
+- "answer_key": Detailed model answer with mark breakdown (e.g. "1 mark for X, 2 marks for explaining Y with example")`;
 
     const response = await ai.models.generateContent({
       model: GEMINI_MODEL,
