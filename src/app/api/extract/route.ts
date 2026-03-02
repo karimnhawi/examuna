@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getGeminiClient, GEMINI_MODEL } from "@/lib/gemini";
+import mammoth from "mammoth";
 
 const EXTRACTION_PROMPT = `You are an exam question extraction expert. Analyze the following text and extract individual exam questions.
 
 For each question, return a JSON object with:
-- "question": The full question text
+- "question": The full question text (preserve the original language — Arabic or English)
 - "topic": The topic/subject area
 - "difficulty": "Easy", "Medium", or "Hard"
 - "ib_band": An integer from 1-7 representing IB band level
@@ -18,6 +20,11 @@ If no questions can be extracted, return an empty array [].
 
 Text to analyze:
 `;
+
+async function extractTextFromDocx(buffer: ArrayBuffer): Promise<string> {
+  const result = await mammoth.extractRawText({ buffer: Buffer.from(buffer) });
+  return result.value;
+}
 
 export async function POST(req: Request) {
   // Auth check
@@ -41,10 +48,100 @@ export async function POST(req: Request) {
 
     let inputText = text;
 
-    // If we have a file path but no text, we'd need OCR/parsing
-    // For now, use the file name as context
-    if (!inputText && fileName) {
-      inputText = `File: ${fileName}. Please generate 5 sample exam questions that would typically appear in a document with this name.`;
+    // If we have a file path but no direct text, download and extract from storage
+    if (!inputText && filePath) {
+      const supabaseAdmin = getSupabaseAdminClient();
+      const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+        .from("test-bank-files")
+        .download(filePath);
+
+      if (downloadError || !fileData) {
+        // Fall back to filename-based generation
+        inputText = `File: ${fileName || filePath}. Please generate 5 sample exam questions that would typically appear in a document with this name.`;
+      } else {
+        const mimeType = fileName?.endsWith(".docx")
+          ? "docx"
+          : fileName?.endsWith(".pdf")
+          ? "pdf"
+          : "other";
+
+        if (mimeType === "docx") {
+          const buffer = await fileData.arrayBuffer();
+          inputText = await extractTextFromDocx(buffer);
+        } else if (mimeType === "pdf") {
+          // For PDFs, send the raw content to Gemini with a note
+          // Gemini 3 Flash can handle PDF content natively via multimodal
+          const buffer = await fileData.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString("base64");
+
+          const response = await ai.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { inlineData: { mimeType: "application/pdf", data: base64 } },
+                  { text: EXTRACTION_PROMPT + "\n[See the attached PDF document above]" },
+                ],
+              },
+            ],
+          });
+
+          const responseText = response.text || "";
+          let extracted;
+          try {
+            const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+            extracted = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+          } catch {
+            extracted = [];
+          }
+
+          // Save and return early for PDF path
+          if (extracted.length > 0 && sourceFileId) {
+            await saveExtractedQuestions(supabase, extracted, user.id, sourceFileId);
+          }
+          return NextResponse.json({ extracted });
+        } else {
+          // Images — send to Gemini multimodally
+          const buffer = await fileData.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString("base64");
+          const imageMime = fileName?.endsWith(".png") ? "image/png"
+            : fileName?.endsWith(".webp") ? "image/webp"
+            : "image/jpeg";
+
+          const response = await ai.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { inlineData: { mimeType: imageMime, data: base64 } },
+                  { text: EXTRACTION_PROMPT + "\n[See the attached image above]" },
+                ],
+              },
+            ],
+          });
+
+          const responseText = response.text || "";
+          let extracted;
+          try {
+            const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+            extracted = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+          } catch {
+            extracted = [];
+          }
+
+          if (extracted.length > 0 && sourceFileId) {
+            await saveExtractedQuestions(supabase, extracted, user.id, sourceFileId);
+          }
+          return NextResponse.json({ extracted });
+        }
+      }
+    }
+
+    // Text-based extraction (DOCX text or direct text input)
+    if (!inputText || !inputText.trim()) {
+      inputText = `File: ${fileName || "unknown"}. Please generate 5 sample exam questions that would typically appear in a document with this name.`;
     }
 
     const response = await ai.models.generateContent({
@@ -54,47 +151,51 @@ export async function POST(req: Request) {
 
     const responseText = response.text || "";
 
-    // Parse the JSON response
     let extracted;
     try {
-      // Try to extract JSON from the response (handles markdown code blocks)
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
       extracted = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
     } catch {
       extracted = [];
     }
 
-    // Save extracted questions to question_bank
     if (extracted.length > 0 && sourceFileId) {
-      const questionsToInsert = extracted.map((q: Record<string, unknown>) => ({
-        user_id: user.id,
-        source_file_id: sourceFileId,
-        question_text: q.question || q.question_text || "",
-        answer_key: q.answer_key || null,
-        topic: q.topic || null,
-        difficulty: q.difficulty || null,
-        ib_band: q.ib_band || null,
-        cognitive_level: q.cognitive_level || null,
-        marks: q.marks || 0,
-        language: "en",
-      }));
-
-      await supabase.from("question_bank").insert(questionsToInsert);
-
-      // Update source file status
-      if (sourceFileId) {
-        await supabase
-          .from("source_files")
-          .update({ status: "processed" })
-          .eq("id", sourceFileId);
-      }
+      await saveExtractedQuestions(supabase, extracted, user.id, sourceFileId);
     }
 
     return NextResponse.json({ extracted });
-  } catch {
+  } catch (err) {
+    console.error("Extract error:", err);
     return NextResponse.json({
       extracted: [],
       error: "Extraction failed. The file may not contain recognizable exam questions.",
     });
   }
+}
+
+async function saveExtractedQuestions(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  extracted: Record<string, unknown>[],
+  userId: string,
+  sourceFileId: string
+) {
+  const questionsToInsert = extracted.map((q) => ({
+    user_id: userId,
+    source_file_id: sourceFileId,
+    question_text: (q.question as string) || (q.question_text as string) || "",
+    answer_key: (q.answer_key as string) || null,
+    topic: (q.topic as string) || null,
+    difficulty: (q.difficulty as string) || null,
+    ib_band: (q.ib_band as number) || null,
+    cognitive_level: (q.cognitive_level as string) || null,
+    marks: (q.marks as number) || 0,
+    language: "en",
+  }));
+
+  await supabase.from("question_bank").insert(questionsToInsert);
+
+  await supabase
+    .from("source_files")
+    .update({ status: "processed" })
+    .eq("id", sourceFileId);
 }

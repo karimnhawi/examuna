@@ -24,6 +24,7 @@
     "docx": "^9.0.3",
     "framer-motion": "^11.9.0",
     "lucide-react": "^0.456.0",
+    "mammoth": "^1.11.0",
     "next": "14.2.15",
     "next-intl": "^3.22.0",
     "next-themes": "^0.3.0",
