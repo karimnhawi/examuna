@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
-import { getGeminiClient } from "@/lib/gemini";
+import { getGeminiClient, GEMINI_MODEL } from "@/lib/gemini";
 
 const EXTRACTION_PROMPT = `You are an exam question extraction expert. Analyze the following text and extract individual exam questions.
 
@@ -37,8 +37,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const ai = getGeminiClient();
 
     let inputText = text;
 
@@ -48,8 +47,12 @@ export async function POST(req: Request) {
       inputText = `File: ${fileName}. Please generate 5 sample exam questions that would typically appear in a document with this name.`;
     }
 
-    const result = await model.generateContent(EXTRACTION_PROMPT + inputText);
-    const responseText = result.response.text();
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: EXTRACTION_PROMPT + inputText,
+    });
+
+    const responseText = response.text || "";
 
     // Parse the JSON response
     let extracted;

@@ -30,7 +30,7 @@ export function Navbar({ locale }: { locale: string }) {
   return (
     <header className="sticky top-0 z-50 border-b border-border glass">
       <div className="container flex h-16 items-center justify-between">
-        <Link href={`/${locale}`} className="flex items-center gap-2 text-xl font-bold tracking-tight">
+        <Link href={user ? `/${locale}/dashboard` : `/${locale}`} className="flex items-center gap-2 text-xl font-bold tracking-tight">
           <FileText className="h-6 w-6 text-primary" />
           <span>Examuna</span>
         </Link>
@@ -41,12 +41,6 @@ export function Navbar({ locale }: { locale: string }) {
             <>
               <Link href={`/${locale}/dashboard`}>
                 <Button variant="ghost" size="sm">Dashboard</Button>
-              </Link>
-              <Link href={`/${locale}/upload`}>
-                <Button variant="ghost" size="sm">Upload</Button>
-              </Link>
-              <Link href={`/${locale}/builder`}>
-                <Button variant="ghost" size="sm">Builder</Button>
               </Link>
               <div className="mx-2 h-6 w-px bg-border" />
               <span className="text-sm text-muted-foreground">{user.email}</span>
@@ -80,12 +74,6 @@ export function Navbar({ locale }: { locale: string }) {
               <>
                 <Link href={`/${locale}/dashboard`} onClick={() => setMobileOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">Dashboard</Button>
-                </Link>
-                <Link href={`/${locale}/upload`} onClick={() => setMobileOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start">Upload</Button>
-                </Link>
-                <Link href={`/${locale}/builder`} onClick={() => setMobileOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start">Builder</Button>
                 </Link>
                 <div className="my-2 h-px bg-border" />
                 <p className="px-4 text-sm text-muted-foreground">{user.email}</p>

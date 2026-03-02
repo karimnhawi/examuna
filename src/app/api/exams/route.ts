@@ -97,3 +97,29 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ exams: exams || [] });
 }
+
+export async function DELETE(req: Request) {
+  const supabase = getSupabaseServerClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const examId = searchParams.get("id");
+
+  if (!examId) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  // Delete exam questions first, then the exam
+  await supabase.from("exam_questions").delete().eq("exam_id", examId);
+  const { error } = await supabase.from("exams").delete().eq("id", examId);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ message: "Exam deleted" });
+}

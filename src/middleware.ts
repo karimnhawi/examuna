@@ -9,7 +9,7 @@ const intlMiddleware = createIntlMiddleware({
   localePrefix: "always",
 });
 
-const protectedPaths = ["/dashboard", "/upload", "/builder", "/export"];
+const protectedPaths = ["/dashboard"];
 
 export async function middleware(request: NextRequest) {
   const intlResponse = intlMiddleware(request);
