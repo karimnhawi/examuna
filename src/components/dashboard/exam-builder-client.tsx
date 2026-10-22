@@ -188,7 +188,7 @@ export function ExamBuilderClient({ locale }: { locale: string }) {
         {questions.map((q, i) => (
           <Card key={q.id} className="group transition-all hover:shadow-md">
             <div className="flex items-start gap-3">
-              <div className="mt-1 flex-shrink-0 text-muted-foreground">
+              <div className="mt-1 shrink-0 text-muted-foreground">
                 <GripVertical className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
@@ -215,7 +215,7 @@ export function ExamBuilderClient({ locale }: { locale: string }) {
                 {editingId === q.id ? (
                   <div className="space-y-2">
                     <textarea
-                      className="w-full rounded-md border border-border bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="w-full rounded-md border border-border bg-background p-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring"
                       rows={3}
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
@@ -232,7 +232,7 @@ export function ExamBuilderClient({ locale }: { locale: string }) {
                 )}
               </div>
 
-              <div className="flex flex-shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                 <Button variant="ghost" size="sm" onClick={() => startEdit(q)} title={t("edit")}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>

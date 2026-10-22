@@ -13,7 +13,7 @@ const ALLOWED_TYPES = [
 
 export async function POST(req: Request) {
   // Auth check
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {

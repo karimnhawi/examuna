@@ -41,7 +41,7 @@ export function QuestionBank() {
 
   // Fetch filtered questions
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     const supabase = getSupabaseBrowserClient();
     let query = supabase
       .from("question_bank")
@@ -53,9 +53,11 @@ export function QuestionBank() {
     if (difficultyFilter) query = query.eq("difficulty", difficultyFilter);
 
     query.then(({ data }) => {
+      if (cancelled) return;
       setQuestions(data || []);
       setLoading(false);
     });
+    return () => { cancelled = true; };
   }, [topicFilter, difficultyFilter]);
 
   if (loading) {
@@ -75,7 +77,7 @@ export function QuestionBank() {
         </span>
         <select
           value={topicFilter}
-          onChange={(e) => setTopicFilter(e.target.value)}
+          onChange={(e) => { setLoading(true); setTopicFilter(e.target.value); }}
           className="h-9 rounded-md border border-border bg-white px-3 text-sm"
         >
           <option value="">{t("allTopics")}</option>
@@ -87,7 +89,7 @@ export function QuestionBank() {
         </select>
         <select
           value={difficultyFilter}
-          onChange={(e) => setDifficultyFilter(e.target.value)}
+          onChange={(e) => { setLoading(true); setDifficultyFilter(e.target.value); }}
           className="h-9 rounded-md border border-border bg-white px-3 text-sm"
         >
           <option value="">{t("allDifficulties")}</option>
@@ -115,7 +117,7 @@ export function QuestionBank() {
                 <p className={`text-sm leading-relaxed ${expandedId === q.id ? "" : "line-clamp-2"}`}>
                   {q.question_text}
                 </p>
-                <div className="flex flex-shrink-0 gap-1">
+                <div className="flex shrink-0 gap-1">
                   {q.topic && (
                     <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                       {q.topic}

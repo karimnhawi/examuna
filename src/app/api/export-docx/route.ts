@@ -27,7 +27,7 @@ const strings = {
 
 export async function GET(req: Request) {
   // Auth check
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {

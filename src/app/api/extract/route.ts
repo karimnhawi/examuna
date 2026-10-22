@@ -27,7 +27,7 @@ async function extractTextFromDocx(buffer: ArrayBuffer): Promise<string> {
 }
 
 async function logExtraction(
-  supabase: ReturnType<typeof getSupabaseServerClient>,
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
   userId: string,
   opts: {
     questionsReturned: number;
@@ -53,7 +53,7 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   // Auth check
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {
@@ -227,7 +227,7 @@ export async function POST(req: Request) {
 }
 
 async function saveExtractedQuestions(
-  supabase: ReturnType<typeof getSupabaseServerClient>,
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
   extracted: Record<string, unknown>[],
   userId: string,
   sourceFileId: string

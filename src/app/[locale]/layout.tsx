@@ -4,13 +4,18 @@ import { locales } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { Toaster } from "sonner";
 
-export default async function LocaleLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: { locale: string };
-}) {
+export default async function LocaleLayout(
+  props: {
+    children: React.ReactNode;
+    params: Promise<{ locale: string }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    children
+  } = props;
+
   const { locale } = params;
   if (!locales.includes(locale as "en" | "ar")) notFound();
   const messages = await getMessages();
