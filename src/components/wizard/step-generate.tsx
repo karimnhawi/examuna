@@ -240,7 +240,7 @@ export function StepGenerate({ data, updateData, onNext, onBack }: Props) {
         {data.questions.map((q, i) => (
           <div
             key={q.id}
-            className="group rounded-lg border border-border p-4 transition-all hover:shadow-sm"
+            className="group rounded-lg border border-border p-4 transition-all hover:shadow-xs"
           >
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground">
@@ -278,7 +278,7 @@ export function StepGenerate({ data, updateData, onNext, onBack }: Props) {
             {editingId === q.id ? (
               <div className="space-y-2">
                 <textarea
-                  className="w-full rounded-md border border-border bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full rounded-md border border-border bg-background p-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring"
                   rows={3}
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}

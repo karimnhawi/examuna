@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useTranslations } from "next-intl";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
@@ -38,7 +38,8 @@ interface Exam {
 
 type View = "home" | "wizard" | "exams" | "questions";
 
-export default function DashboardPage({ params }: { params: { locale: string } }) {
+export default function DashboardPage(props: { params: Promise<{ locale: string }> }) {
+  const params = use(props.params);
   const locale = params.locale;
   const t = useTranslations("dashboard");
   const searchParams = useSearchParams();
@@ -231,7 +232,7 @@ export default function DashboardPage({ params }: { params: { locale: string } }
                     {t("createExamDesc")}
                   </p>
                 </div>
-                <div className="flex-shrink-0 rounded-full bg-primary p-3 text-primary-foreground">
+                <div className="shrink-0 rounded-full bg-primary p-3 text-primary-foreground">
                   <Plus className="h-5 w-5" />
                 </div>
               </div>
@@ -241,7 +242,7 @@ export default function DashboardPage({ params }: { params: { locale: string } }
             <div className="mb-8 grid gap-4 sm:grid-cols-2">
               <button
                 onClick={() => navigateTo("exams")}
-                className="rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all hover:shadow-md hover:border-primary/30"
+                className="rounded-xl border border-border bg-card p-5 text-left shadow-xs transition-all hover:shadow-md hover:border-primary/30"
               >
                 <div className="mb-2 inline-flex rounded-lg bg-primary/10 p-2">
                   <FileText className="h-5 w-5 text-primary" />
@@ -254,7 +255,7 @@ export default function DashboardPage({ params }: { params: { locale: string } }
 
               <button
                 onClick={() => navigateTo("questions")}
-                className="rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all hover:shadow-md hover:border-primary/30"
+                className="rounded-xl border border-border bg-card p-5 text-left shadow-xs transition-all hover:shadow-md hover:border-primary/30"
               >
                 <div className="mb-2 inline-flex rounded-lg bg-primary/10 p-2">
                   <BookOpen className="h-5 w-5 text-primary" />

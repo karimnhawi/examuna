@@ -18,7 +18,7 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   // Auth check
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {
@@ -362,7 +362,7 @@ Include a MIX of difficulty levels: roughly 30% Easy, 50% Medium, 20% Hard.`;
 }
 
 async function handleLegacyGenerate(
-  supabase: ReturnType<typeof getSupabaseServerClient>,
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
   subject: string,
   difficulty: string,
   safeCount: number,

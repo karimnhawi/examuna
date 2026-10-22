@@ -72,7 +72,7 @@ export function StepSetup({ data, updateData, onNext }: Props) {
           <select
             value={data.curriculum}
             onChange={(e) => updateData({ curriculum: e.target.value, grade: "" })}
-            className="flex h-10 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="flex h-10 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="">{t("curriculumPlaceholder")}</option>
             {CURRICULA.map((c) => (
@@ -92,7 +92,7 @@ export function StepSetup({ data, updateData, onNext }: Props) {
           <select
             value={data.grade}
             onChange={(e) => updateData({ grade: e.target.value })}
-            className="flex h-10 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="flex h-10 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="">{t("gradePlaceholder")}</option>
             {grades.map((g) => (
@@ -125,7 +125,7 @@ export function StepSetup({ data, updateData, onNext }: Props) {
           <select
             value={data.language}
             onChange={(e) => updateData({ language: e.target.value as "en" | "ar" })}
-            className="flex h-10 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="flex h-10 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="en">English</option>
             <option value="ar">العربية</option>

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 
-export async function GET(request: Request, { params }: { params: { locale: string } }) {
+export async function GET(request: Request, props: { params: Promise<{ locale: string }> }) {
+  const params = await props.params;
   const { searchParams, origin } = new URL(request.url);
   const locale = params.locale || "en";
   const code = searchParams.get("code");
@@ -20,7 +21,7 @@ export async function GET(request: Request, { params }: { params: { locale: stri
   }
 
   if (code) {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (!exchangeError) {
       return NextResponse.redirect(`${origin}${next}`);

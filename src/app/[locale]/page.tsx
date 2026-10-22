@@ -7,12 +7,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, Brain, FileDown, Sparkles, CheckCircle, Zap, Shield } from "lucide-react";
 
-export default async function LandingPage({ params }: { params: { locale: string } }) {
+export default async function LandingPage(props: { params: Promise<{ locale: string }> }) {
+  const params = await props.params;
   const t = await getTranslations("landing");
   const locale = params.locale;
 
   // Redirect logged-in users straight to dashboard
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) redirect(`/${locale}/dashboard`);
   const ctaHref = `/${locale}/auth`;
@@ -23,7 +24,7 @@ export default async function LandingPage({ params }: { params: { locale: string
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-blue-500/5" />
+        <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-blue-500/5" />
         <div className="absolute top-20 -left-32 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute bottom-10 -right-32 h-64 w-64 rounded-full bg-blue-400/10 blur-3xl" />
 
@@ -124,7 +125,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               { icon: Shield, title: t("benefit3Title"), desc: t("benefit3Desc") },
             ].map((item) => (
               <div key={item.title} className="flex gap-4">
-                <item.icon className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
+                <item.icon className="mt-1 h-5 w-5 shrink-0 text-primary" />
                 <div>
                   <h3 className="mb-1 font-semibold">{item.title}</h3>
                   <p className="text-sm text-muted-foreground">{item.desc}</p>
@@ -138,7 +139,7 @@ export default async function LandingPage({ params }: { params: { locale: string
       {/* CTA */}
       <section className="py-20">
         <div className="container">
-          <Card className="mx-auto max-w-2xl bg-gradient-to-br from-primary/5 to-blue-500/5 text-center">
+          <Card className="mx-auto max-w-2xl bg-linear-to-br from-primary/5 to-blue-500/5 text-center">
             <h2 className="mb-4 text-2xl font-bold">{t("ctaTitle")}</h2>
             <p className="mb-8 text-muted-foreground">{t("ctaSub")}</p>
             <Link href={ctaHref}>

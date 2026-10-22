@@ -107,7 +107,7 @@ export function ExamList({ initialExams, locale }: Props) {
           ) : (
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
-                <FileText className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
                 <div className="min-w-0">
                   <p className="font-medium truncate">{exam.title}</p>
                   <p className="text-xs text-muted-foreground">
@@ -115,7 +115,7 @@ export function ExamList({ initialExams, locale }: Props) {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                     exam.status === "draft"

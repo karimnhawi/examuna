@@ -163,11 +163,11 @@ export function StepExport({ data, updateData, locale, onBack, onDone }: Props) 
             key={q.id}
             className="flex items-start gap-2 rounded border border-border p-2 text-sm"
           >
-            <span className="flex-shrink-0 font-medium text-muted-foreground">
+            <span className="shrink-0 font-medium text-muted-foreground">
               {i + 1}.
             </span>
             <span className="line-clamp-2">{q.text}</span>
-            <span className="ml-auto flex-shrink-0 text-xs text-muted-foreground">
+            <span className="ml-auto shrink-0 text-xs text-muted-foreground">
               [{q.marks} {t("marks")}]
             </span>
           </div>

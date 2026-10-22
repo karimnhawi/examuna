@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
@@ -11,7 +11,8 @@ import { Navbar } from "@/components/layout/navbar";
 import { toast } from "sonner";
 import { Loader2, FileText, LogIn, UserPlus } from "lucide-react";
 
-export default function AuthPage({ params }: { params: { locale: string } }) {
+export default function AuthPage(props: { params: Promise<{ locale: string }> }) {
+  const params = use(props.params);
   const t = useTranslations("auth");
   const locale = params.locale;
   const router = useRouter();
